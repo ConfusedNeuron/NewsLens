@@ -10,7 +10,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from db.database import get_conn, fetchall, execute
-from config.settings import ANTHROPIC_API_KEY, ANTHROPIC_MODEL, LLM_CALL_DELAY_SECONDS
+from config.settings import GEMINI_API_KEY, GEMINI_BASE_URL, GEMINI_MODEL, LLM_CALL_DELAY_SECONDS
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +27,14 @@ VALID_HORIZONS = {"immediate", "short_term", "long_term"}
 
 
 def get_client():
-    if not ANTHROPIC_API_KEY:
-        raise RuntimeError("ANTHROPIC_API_KEY not configured")
-    import anthropic
-    return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    if not GEMINI_API_KEY:
+        raise RuntimeError("AI_INTEGRATIONS_GEMINI_API_KEY not configured")
+    import google.generativeai as genai
+    client_options = {}
+    if GEMINI_BASE_URL:
+        client_options["api_endpoint"] = GEMINI_BASE_URL
+    genai.configure(api_key=GEMINI_API_KEY, client_options=client_options if client_options else None)
+    return genai.GenerativeModel(GEMINI_MODEL)
 
 
 def load_prompt() -> str:
@@ -54,20 +58,22 @@ def validate_extraction(data: dict) -> bool:
     return True
 
 
-def extract_item(client, clean: dict) -> dict | None:
+def extract_item(model, clean: dict) -> dict | None:
     prompt_template = load_prompt()
     text = clean["clean_text"][:4000]
     prompt = prompt_template.replace("{article_text}", text)
 
     for attempt in range(2):
         try:
-            response = client.messages.create(
-                model=ANTHROPIC_MODEL,
-                max_tokens=800,
-                temperature=0,
-                messages=[{"role": "user", "content": prompt}],
+            response = model.generate_content(
+                prompt,
+                generation_config={
+                    "temperature": 0,
+                    "max_output_tokens": 8192,
+                    "response_mime_type": "application/json",
+                },
             )
-            content = response.content[0].text.strip()
+            content = response.text.strip()
             if content.startswith("```"):
                 content = content.split("```")[1]
                 if content.startswith("json"):
@@ -87,16 +93,16 @@ def extract_item(client, clean: dict) -> dict | None:
 
 
 def run() -> int:
-    if not ANTHROPIC_API_KEY:
-        logger.warning("[Extract] Skipping — ANTHROPIC_API_KEY not configured")
+    if not GEMINI_API_KEY:
+        logger.warning("[Extract] Skipping — AI_INTEGRATIONS_GEMINI_API_KEY not configured")
         return 0
 
     pending = fetchall("SELECT * FROM clean_items WHERE status = 'pending' LIMIT 50")
-    client = get_client()
+    model = get_client()
     extracted = 0
 
     for clean in pending:
-        result = extract_item(client, clean)
+        result = extract_item(model, clean)
         if result is None:
             execute("UPDATE clean_items SET status = 'failed' WHERE id = ?", (clean["id"],))
             continue
