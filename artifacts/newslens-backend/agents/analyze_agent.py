@@ -31,12 +31,11 @@ def load_sop() -> dict:
 def get_client():
     if not GEMINI_API_KEY:
         raise RuntimeError("AI_INTEGRATIONS_GEMINI_API_KEY not configured")
-    import google.generativeai as genai
-    client_options = {}
+    from google import genai
+    http_options = {}
     if GEMINI_BASE_URL:
-        client_options["api_endpoint"] = GEMINI_BASE_URL
-    genai.configure(api_key=GEMINI_API_KEY, client_options=client_options if client_options else None)
-    return genai.GenerativeModel(GEMINI_MODEL)
+        http_options["base_url"] = GEMINI_BASE_URL
+    return genai.Client(api_key=GEMINI_API_KEY, http_options=http_options if http_options else None)
 
 
 def get_domain_sop(sectors: list, sop: dict) -> str:
@@ -67,7 +66,8 @@ def load_prompt_template() -> str:
         return f.read()
 
 
-def analyze_item(model, enriched: dict, sop: dict, user_profile: dict | None = None) -> dict | None:
+def analyze_item(client, enriched: dict, sop: dict, user_profile: dict | None = None) -> dict | None:
+    from google.genai import types as genai_types
     classified_id = enriched["classified_id"]
     classified = fetchone("SELECT * FROM classified_items WHERE id = ?", (classified_id,)) or {}
     extracted_id = classified.get("extracted_id")
@@ -105,13 +105,14 @@ def analyze_item(model, enriched: dict, sop: dict, user_profile: dict | None = N
 
     for attempt in range(2):
         try:
-            response = model.generate_content(
-                prompt,
-                generation_config={
-                    "temperature": 0.3,
-                    "max_output_tokens": 8192,
-                    "response_mime_type": "application/json",
-                },
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    temperature=0.3,
+                    max_output_tokens=1200,
+                    response_mime_type="application/json",
+                ),
             )
             content = response.text.strip()
             if content.startswith("```"):
@@ -138,12 +139,12 @@ def run() -> int:
         return 0
 
     pending = fetchall("SELECT * FROM enriched_items WHERE status = 'pending' LIMIT 30")
-    model = get_client()
+    client = get_client()
     sop = load_sop()
     analyzed = 0
 
     for enriched in pending:
-        result = analyze_item(model, enriched, sop)
+        result = analyze_item(client, enriched, sop)
         if result is None:
             execute("UPDATE enriched_items SET status = 'failed' WHERE id = ?", (enriched["id"],))
             continue

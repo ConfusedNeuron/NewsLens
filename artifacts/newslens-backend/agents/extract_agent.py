@@ -29,12 +29,11 @@ VALID_HORIZONS = {"immediate", "short_term", "long_term"}
 def get_client():
     if not GEMINI_API_KEY:
         raise RuntimeError("AI_INTEGRATIONS_GEMINI_API_KEY not configured")
-    import google.generativeai as genai
-    client_options = {}
+    from google import genai
+    http_options = {}
     if GEMINI_BASE_URL:
-        client_options["api_endpoint"] = GEMINI_BASE_URL
-    genai.configure(api_key=GEMINI_API_KEY, client_options=client_options if client_options else None)
-    return genai.GenerativeModel(GEMINI_MODEL)
+        http_options["base_url"] = GEMINI_BASE_URL
+    return genai.Client(api_key=GEMINI_API_KEY, http_options=http_options if http_options else None)
 
 
 def load_prompt() -> str:
@@ -58,20 +57,22 @@ def validate_extraction(data: dict) -> bool:
     return True
 
 
-def extract_item(model, clean: dict) -> dict | None:
+def extract_item(client, clean: dict) -> dict | None:
+    from google.genai import types as genai_types
     prompt_template = load_prompt()
     text = clean["clean_text"][:4000]
     prompt = prompt_template.replace("{article_text}", text)
 
     for attempt in range(2):
         try:
-            response = model.generate_content(
-                prompt,
-                generation_config={
-                    "temperature": 0,
-                    "max_output_tokens": 8192,
-                    "response_mime_type": "application/json",
-                },
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    temperature=0,
+                    max_output_tokens=800,
+                    response_mime_type="application/json",
+                ),
             )
             content = response.text.strip()
             if content.startswith("```"):
@@ -98,11 +99,11 @@ def run() -> int:
         return 0
 
     pending = fetchall("SELECT * FROM clean_items WHERE status = 'pending' LIMIT 50")
-    model = get_client()
+    client = get_client()
     extracted = 0
 
     for clean in pending:
-        result = extract_item(model, clean)
+        result = extract_item(client, clean)
         if result is None:
             execute("UPDATE clean_items SET status = 'failed' WHERE id = ?", (clean["id"],))
             continue

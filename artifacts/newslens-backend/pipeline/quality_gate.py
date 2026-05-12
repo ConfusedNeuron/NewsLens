@@ -75,8 +75,7 @@ def run() -> dict:
             execute("UPDATE cards SET is_live = TRUE WHERE id = ?", (card["id"],))
             approved += 1
         elif verdict == "hold":
-            # Hold cards go live after 24h by default; for now approve holds too
-            execute("UPDATE cards SET is_live = TRUE WHERE id = ?", (card["id"],))
+            # Hold cards remain is_live = FALSE until manually reviewed or re-processed
             held += 1
         else:
             execute("DELETE FROM cards WHERE id = ?", (card["id"],))
