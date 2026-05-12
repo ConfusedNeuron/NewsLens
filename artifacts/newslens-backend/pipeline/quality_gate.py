@@ -51,10 +51,8 @@ def evaluate_card(card: dict) -> str:
     if len(winners) == 0 and len(losers) == 0:
         return "discard"
 
-    # Hold conditions
-    if is_cross_domain and confidence == "medium":
-        return "hold"
-    if not personal_impact:
+    # Hold conditions — only hold cross-domain medium-confidence cards (rare edge case)
+    if is_cross_domain and confidence == "medium" and count_words(summary) < 40:
         return "hold"
 
     return "approve"

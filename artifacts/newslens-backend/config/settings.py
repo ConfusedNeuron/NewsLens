@@ -24,7 +24,10 @@ REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "newslens/1.0")
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./newslens.db")
-DB_PATH = DATABASE_URL.replace("sqlite:///", "")
+if DATABASE_URL.startswith("sqlite:///"):
+    DB_PATH = DATABASE_URL[len("sqlite:///"):]
+else:
+    DB_PATH = "./newslens.db"
 
 PORT = int(os.getenv("PORT", "8000"))
 
