@@ -1,0 +1,87 @@
+Finance:
+  lens: "What moves, and in which direction. Focus on measurable market impacts."
+  winners_definition: "Sectors, companies, instrument holders, borrowers, or investors who benefit from the event through price appreciation, reduced costs, or improved competitive position."
+  losers_definition: "Counterparts who face headwinds through price declines, increased costs, competitive disadvantage, or regulatory burden."
+  magnitude_anchors:
+    - "% change in stock price or index"
+    - "Rupee or dollar value (e.g., ₹2.1L Cr market cap erased)"
+    - "Rate basis points (e.g., +25bps hike)"
+    - "Revenue or profit impact in absolute terms"
+  time_horizons:
+    immediate: "Same day to 1 week"
+    short_term: "1 week to 3 months"
+    long_term: "3 months to 2 years"
+  india_angle: "RBI policy implications, FII/DII flows, Nifty/Sensex sector impact, INR movement, corporate earnings"
+  usa_angle: "Fed policy, S&P/Nasdaq sector impact, dollar index strength, Treasury yields"
+  china_angle: "PBOC policy, yuan movement, export competitiveness, trade flow implications, property sector"
+  enrichment_priority:
+    - stock_prices
+    - market_caps
+    - fed_funds_rate
+    - usd_inr
+    - commodity_prices
+
+Technology:
+  lens: "What capability shifts, what market share changes, what developer/consumer behavior changes."
+  winners_definition: "Companies gaining capability or market share, developers getting new tools, consumers getting better products, workers in growing segments."
+  losers_definition: "Incumbents being disrupted, workers displaced, competing platforms losing relevance, companies facing regulation."
+  magnitude_anchors:
+    - "User or developer count (millions)"
+    - "Revenue or ARR estimates"
+    - "Market share % gain/loss"
+    - "Valuation impact"
+    - "Jobs created or displaced"
+  time_horizons:
+    immediate: "Product launch to 1 month"
+    short_term: "1-6 months adoption curve"
+    long_term: "6+ months structural shift"
+  india_angle: "IT sector impact (TCS, Infosys, Wipro), startup ecosystem effect, talent demand signal, BPO/outsourcing implications"
+  usa_angle: "Big tech power shift (FAANG), regulation risk (FTC, EU AI Act), VC sentiment, developer ecosystem"
+  china_angle: "Tech sovereignty angle (Huawei, SMIC), chip access and export controls, AI competition, domestic alternatives"
+  enrichment_priority:
+    - stock_prices
+    - market_caps
+
+Geopolitics:
+  lens: "What changes in power, policy, or alliances. Follow the money and the weapons."
+  winners_definition: "Nations, blocs, political parties, or demographics that gain influence, stability, resources, or strategic advantage."
+  losers_definition: "Nations or groups facing isolation, economic pressure, military threat, or instability."
+  magnitude_anchors:
+    - "Trade volume affected ($ billions)"
+    - "Population impacted (millions)"
+    - "Treaty or agreement scope"
+    - "Military or defense budget impact"
+    - "Sanctions or tariff value"
+  time_horizons:
+    immediate: "Active crisis or decision"
+    short_term: "Policy implementation, 1-6 months"
+    long_term: "Structural geopolitical shift, 1+ years"
+  india_angle: "Strategic positioning, border security implications (China/Pakistan), trade policy impact, diaspora effect, defense procurement"
+  usa_angle: "Alliance strength (NATO, QUAD), global influence projection, domestic political implications, sanctions regime"
+  china_angle: "Belt & Road impact, regional influence (Southeast Asia, Africa), Taiwan strait dynamics, multilateral institution influence"
+  enrichment_priority:
+    - usd_inr
+    - crude_oil
+    - gold
+
+Environment:
+  lens: "What measurable change or commitment is being made. Ground in numbers — temperature, emissions, dollars."
+  winners_definition: "Affected regions gaining protection or resources, clean energy sector companies and workers, future generations, insurance sectors in low-risk zones."
+  losers_definition: "Fossil fuel sector, high-emission industries, regions with stranded assets, insurance sectors in high-risk zones."
+  magnitude_anchors:
+    - "Emissions reduction (Mt CO2)"
+    - "Temperature target (degrees C)"
+    - "Fund or investment size ($ billions)"
+    - "Affected area (sq km or % of territory)"
+    - "Population in affected zone (millions)"
+    - "Renewable capacity (GW)"
+  time_horizons:
+    immediate: "Active weather event or policy decision"
+    short_term: "1-2 year implementation"
+    long_term: "2050 targets, structural transition"
+  india_angle: "Monsoon and agricultural impact, energy transition pace (coal vs solar), green finance flows, vulnerable coastal cities"
+  usa_angle: "IRA implementation progress, clean energy investment, political headwinds from fossil fuel lobby"
+  china_angle: "Solar and EV supply chain dominance, carbon market development, coal dependency reduction timeline"
+  enrichment_priority:
+    - crude_oil
+    - commodity_prices
