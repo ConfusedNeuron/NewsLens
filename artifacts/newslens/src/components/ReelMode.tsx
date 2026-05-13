@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { Card } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { Card } from "@workspace/api-client-react";
 import { NewsCard, UserProfile } from "./NewsCard";
 
 interface ReelModeProps {

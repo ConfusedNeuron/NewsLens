@@ -1,4 +1,4 @@
-import { Card } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { Card } from "@workspace/api-client-react";
 import { DOMAIN_COLORS } from "./NLFilterBar";
 
 export interface UserProfile {

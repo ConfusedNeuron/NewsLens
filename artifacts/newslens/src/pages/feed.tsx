@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useListCards, getListCardsQueryKey, useUpdateUserProfile } from "@workspace/api-client-react";
-import { Card } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { Card } from "@workspace/api-client-react";
 import { NLHeader, ViewMode } from "@/components/NLHeader";
 import { NLFilterBar } from "@/components/NLFilterBar";
 import { SwipeMode } from "@/components/SwipeMode";
@@ -401,22 +401,38 @@ function DoneState({ onReset }: { onReset: () => void }) {
       >
         Next update in a few hours.
       </p>
-      <button
-        onClick={onReset}
-        style={{
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 8,
-          padding: "8px 20px",
-          color: "#F0F0F5",
-          fontFamily: "'DM Sans', system-ui, sans-serif",
-          fontSize: 13,
-          cursor: "pointer",
-          marginTop: 8,
-        }}
-      >
-        Review cards again
-      </button>
+      <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+        <button
+          onClick={onReset}
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 8,
+            padding: "8px 20px",
+            color: "#F0F0F5",
+            fontFamily: "'DM Sans', system-ui, sans-serif",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          Review cards again
+        </button>
+        <button
+          onClick={() => window.location.href = "/saved"}
+          style={{
+            background: "rgba(0,212,170,0.08)",
+            border: "1px solid rgba(0,212,170,0.2)",
+            borderRadius: 8,
+            padding: "8px 20px",
+            color: "#00D4AA",
+            fontFamily: "'DM Sans', system-ui, sans-serif",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          View saved cards
+        </button>
+      </div>
     </div>
   );
 }

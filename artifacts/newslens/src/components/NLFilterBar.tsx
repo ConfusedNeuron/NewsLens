@@ -37,8 +37,6 @@ export function NLFilterBar({
   showUncertain,
   onShowUncertainToggle,
 }: NLFilterBarProps) {
-  const activeColor = domain ? DOMAIN_COLORS[domain] ?? "#F0F0F5" : "#F0F0F5";
-
   return (
     <div
       style={{
@@ -54,13 +52,15 @@ export function NLFilterBar({
       }}
     >
       {/* Domain tabs */}
-      <div style={{ display: "flex", gap: 0, flexShrink: 0 }}>
+      <div role="tablist" aria-label="Domain filter" style={{ display: "flex", gap: 0, flexShrink: 0 }}>
         {DOMAINS.map((d) => {
           const isActive = domain === d.value;
           const color = d.value ? DOMAIN_COLORS[d.value] : "#F0F0F5";
           return (
             <button
               key={String(d.value)}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => onDomainChange(d.value)}
               style={{
                 background: "none",
@@ -72,7 +72,7 @@ export function NLFilterBar({
                 fontWeight: isActive ? 600 : 400,
                 color: isActive ? color : "#8888AA",
                 borderBottom: isActive ? `2px solid ${color}` : "2px solid transparent",
-                transition: "all 0.15s",
+                transition: "color 0.15s, border-color 0.15s",
                 whiteSpace: "nowrap",
               }}
             >
@@ -83,6 +83,7 @@ export function NLFilterBar({
       </div>
 
       <div
+        aria-hidden="true"
         style={{
           width: 1,
           height: 20,
@@ -92,12 +93,13 @@ export function NLFilterBar({
       />
 
       {/* Geo pills */}
-      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+      <div role="group" aria-label="Geography filter" style={{ display: "flex", gap: 6, flexShrink: 0 }}>
         {GEOS.map((g) => {
           const isSelected = selectedGeos.includes(g.value);
           return (
             <button
               key={g.value}
+              aria-pressed={isSelected}
               onClick={() => onGeoToggle(g.value)}
               style={{
                 background: isSelected ? "rgba(255,255,255,0.12)" : "transparent",
@@ -120,6 +122,7 @@ export function NLFilterBar({
       </div>
 
       <div
+        aria-hidden="true"
         style={{
           width: 1,
           height: 20,
@@ -129,7 +132,7 @@ export function NLFilterBar({
         }}
       />
 
-      {/* Confidence toggle */}
+      {/* Confidence toggle — proper checkbox for accessibility */}
       <label
         style={{
           display: "flex",
@@ -143,9 +146,13 @@ export function NLFilterBar({
           whiteSpace: "nowrap",
         }}
       >
-        <div
-          onClick={onShowUncertainToggle}
+        <input
+          type="checkbox"
+          checked={showUncertain}
+          onChange={onShowUncertainToggle}
           style={{
+            appearance: "none",
+            WebkitAppearance: "none",
             width: 28,
             height: 16,
             borderRadius: 8,
@@ -153,23 +160,19 @@ export function NLFilterBar({
             border: "1px solid rgba(255,255,255,0.1)",
             position: "relative",
             cursor: "pointer",
-            transition: "background 0.2s",
             flexShrink: 0,
+            transition: "background 0.2s",
+            outline: "none",
           }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: 2,
-              left: showUncertain ? 13 : 2,
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              background: showUncertain ? "#F0F0F5" : "#4A4A6A",
-              transition: "left 0.2s",
-            }}
-          />
-        </div>
+          aria-label="Show uncertain cards"
+        />
+        <span
+          style={{
+            pointerEvents: "none",
+            position: "relative",
+            display: "inline-block",
+          }}
+        />
         Show uncertain
       </label>
     </div>

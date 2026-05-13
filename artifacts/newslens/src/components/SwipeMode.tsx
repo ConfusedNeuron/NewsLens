@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, useTransform, useAnimation } from "framer-motion";
-import { Card } from "@workspace/api-client-react/src/generated/api.schemas";
+import { useEffect, useState } from "react";
+import { motion, useMotionValue, useTransform, useAnimation, type PanInfo } from "framer-motion";
+import type { Card } from "@workspace/api-client-react";
 import { NewsCard, UserProfile } from "./NewsCard";
 import { useSaveSwipe } from "./swipe-utils";
 
@@ -181,7 +181,7 @@ function SwipeCard({
   const scale = depth === 0 ? 1 : depth === 1 ? 0.96 : 0.92;
   const yOffset = depth === 0 ? 0 : depth === 1 ? 10 : 20;
 
-  async function handleDragEnd(_: any, info: { offset: { x: number }; velocity: { x: number } }) {
+  async function handleDragEnd(_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
     const threshold = Math.min(480, window.innerWidth * 0.9) * 0.38;
     const shouldDismiss =
       Math.abs(info.offset.x) > threshold || Math.abs(info.velocity.x) > 550;

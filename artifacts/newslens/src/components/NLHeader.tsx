@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { Link } from "wouter";
 import { User, Database, Activity } from "lucide-react";
 
@@ -49,6 +50,8 @@ export function NLHeader({ mode, onModeChange, onProfileClick }: NLHeaderProps) 
         }}
       >
         <div
+          role="group"
+          aria-label="View mode"
           style={{
             display: "flex",
             background: "rgba(255,255,255,0.05)",
@@ -114,7 +117,7 @@ export function NLHeader({ mode, onModeChange, onProfileClick }: NLHeaderProps) 
           </button>
         </Link>
         <button
-          aria-label="Profile"
+          aria-label="Open profile settings"
           onClick={onProfileClick}
           style={{
             width: 32,
@@ -157,6 +160,7 @@ function ModeBtn({
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       style={{
         fontFamily: "'DM Sans', system-ui, sans-serif",
         fontSize: 12,
@@ -177,12 +181,14 @@ function ModeBtn({
 }
 
 function LockedModeBtn() {
-  const [showTooltip, setShowTooltip] = React.useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   return (
     <div style={{ position: "relative" }}>
       <button
         onClick={() => setShowTooltip((v) => !v)}
+        aria-expanded={showTooltip}
+        aria-haspopup="true"
         style={{
           fontFamily: "'DM Sans', system-ui, sans-serif",
           fontSize: 12,
@@ -202,6 +208,7 @@ function LockedModeBtn() {
       </button>
       {showTooltip && (
         <div
+          role="tooltip"
           style={{
             position: "absolute",
             top: "calc(100% + 8px)",
@@ -230,6 +237,7 @@ function LockedModeBtn() {
           </a>
           <button
             onClick={() => setShowTooltip(false)}
+            aria-label="Close"
             style={{
               position: "absolute",
               top: 8,
@@ -248,5 +256,3 @@ function LockedModeBtn() {
     </div>
   );
 }
-
-import React from "react";
