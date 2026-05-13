@@ -1,4 +1,4 @@
-import { useSwipeCard } from "@workspace/api-client-react";
+import { useSwipeCard } from "@/api";
 
 export function useSaveSwipe() {
   const swipeCard = useSwipeCard();

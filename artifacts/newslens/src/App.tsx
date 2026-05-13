@@ -11,6 +11,7 @@ import CardDetail from "@/pages/card-detail";
 import Sources from "@/pages/sources";
 import Profile from "@/pages/profile";
 import Pipeline from "@/pages/pipeline";
+import SavedCards from "@/pages/saved-cards";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/pipeline">
         <Layout><Pipeline /></Layout>
       </Route>
+      <Route path="/saved" component={SavedCards} />
       <Route component={NotFound} />
     </Switch>
   );

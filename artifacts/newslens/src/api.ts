@@ -5,6 +5,13 @@ import {
   getUserProfile,
   updateUserProfile,
   swipeCard,
+  // React Query hooks — re-exported so all components import from this module
+  useListCards,
+  getListCardsQueryKey,
+  useUpdateUserProfile,
+  useSwipeCard,
+  useGetCard,
+  useGetUserProfile,
 } from "@workspace/api-client-react";
 import type {
   Card,
@@ -19,12 +26,13 @@ import type {
 // All API calls use relative paths (/api/...).
 // In development, Vite proxies /api → FastAPI on port 8000.
 // In production, the Replit proxy routes /api → the api-server → FastAPI.
-// null keeps fetch calls relative to the current origin.
+// The backend registers all routes under the /api prefix (e.g. /api/cards, /api/user/profile).
+// null keeps fetch calls relative to the current origin — correct in both environments.
 setBaseUrl(null);
 
 // ---------------------------------------------------------------------------
-// Typed API facade — all backend calls go through these functions.
-// Mirrors api.js from the UI spec (section 14), adapted for TypeScript.
+// Typed async facade — mirrors api.js from UI_SPEC section 14.
+// All backend I/O goes through these functions.
 // ---------------------------------------------------------------------------
 
 export async function getCards(params?: ListCardsParams): Promise<CardList> {
@@ -56,5 +64,24 @@ export async function recordSwipe(
   await swipeCard(cardId, { direction });
 }
 
-export { setBaseUrl };
-export type { Card, CardList, ListCardsParams, ApiUserProfile, UserProfileInput };
+// ---------------------------------------------------------------------------
+// React Query hook exports — import from here, not from @workspace/api-client-react
+// ---------------------------------------------------------------------------
+export {
+  useListCards,
+  getListCardsQueryKey,
+  useUpdateUserProfile,
+  useSwipeCard,
+  useGetCard,
+  useGetUserProfile,
+  setBaseUrl,
+};
+
+export type {
+  Card,
+  CardList,
+  ListCardsParams,
+  ApiUserProfile,
+  UserProfileInput,
+  SwipeInputDirection,
+};

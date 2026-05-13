@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { motion, useMotionValue, useTransform, useAnimation, type PanInfo } from "framer-motion";
-import type { Card } from "@workspace/api-client-react";
+import { motion, useMotionValue, useTransform, useAnimation, useReducedMotion, type PanInfo } from "framer-motion";
+import type { Card } from "@/api";
 import { NewsCard, UserProfile } from "./NewsCard";
 import { useSaveSwipe } from "./swipe-utils";
 
@@ -172,14 +172,26 @@ function SwipeCard({
   onDismiss: (dir: "left" | "right") => void;
   isActive: boolean;
 }) {
+  const reducedMotion = useReducedMotion();
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-300, 300], [-18, 18]);
+  const rotate = useTransform(x, [-300, 300], reducedMotion ? [0, 0] : [-18, 18]);
   const skipOpacity = useTransform(x, [-160, -40, 0], [1, 0.4, 0]);
   const saveOpacity = useTransform(x, [0, 40, 160], [0, 0.4, 1]);
   const controls = useAnimation();
 
   const scale = depth === 0 ? 1 : depth === 1 ? 0.96 : 0.92;
   const yOffset = depth === 0 ? 0 : depth === 1 ? 10 : 20;
+
+  // When reduced motion is preferred, transitions are instant (duration: 0)
+  const springTransition = reducedMotion
+    ? { duration: 0 }
+    : { type: "spring" as const, stiffness: 300, damping: 28 };
+  const dismissTransition = reducedMotion
+    ? { duration: 0 }
+    : { duration: 0.28, ease: "easeIn" as const };
+  const snapTransition = reducedMotion
+    ? { duration: 0 }
+    : { type: "spring" as const, stiffness: 380, damping: 30 };
 
   async function handleDragEnd(_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
     const threshold = Math.min(480, window.innerWidth * 0.9) * 0.38;
@@ -190,20 +202,20 @@ function SwipeCard({
       const direction = info.offset.x > 0 ? "right" : "left";
       await controls.start({
         x: direction === "right" ? 1200 : -1200,
-        rotate: direction === "right" ? 20 : -20,
+        rotate: reducedMotion ? 0 : direction === "right" ? 20 : -20,
         opacity: 0,
-        transition: { duration: 0.28, ease: "easeIn" },
+        transition: dismissTransition,
       });
       onDismiss(direction);
     } else {
-      controls.start({ x: 0, rotate: 0, transition: { type: "spring", stiffness: 380, damping: 30 } });
+      controls.start({ x: 0, rotate: 0, transition: snapTransition });
     }
   }
 
   return (
     <motion.div
       animate={{ scale, y: yOffset, ...(!isActive ? {} : {}) }}
-      transition={{ type: "spring", stiffness: 300, damping: 28 }}
+      transition={springTransition}
       style={{
         position: "absolute",
         inset: 0,

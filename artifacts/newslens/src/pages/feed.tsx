@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useListCards, getListCardsQueryKey, useUpdateUserProfile } from "@workspace/api-client-react";
-import type { Card } from "@workspace/api-client-react";
+import { useListCards, getListCardsQueryKey, useUpdateUserProfile } from "@/api";
+import type { Card } from "@/api";
 import { NLHeader, ViewMode } from "@/components/NLHeader";
 import { NLFilterBar } from "@/components/NLFilterBar";
 import { SwipeMode } from "@/components/SwipeMode";
