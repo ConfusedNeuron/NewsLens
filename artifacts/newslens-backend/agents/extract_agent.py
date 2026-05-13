@@ -10,7 +10,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from db.database import get_conn, fetchall, execute
-from config.settings import GEMINI_API_KEY, GEMINI_BASE_URL, GEMINI_MODEL, LLM_CALL_DELAY_SECONDS
+from config.settings import GEMINI_API_KEY, GEMINI_MODEL, LLM_CALL_DELAY_SECONDS
+from agents.gemini_client import build_client
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +28,7 @@ VALID_HORIZONS = {"immediate", "short_term", "long_term"}
 
 
 def get_client():
-    if not GEMINI_API_KEY:
-        raise RuntimeError("AI_INTEGRATIONS_GEMINI_API_KEY not configured")
-    from google import genai
-    from google.genai import types as genai_types
-    http_options = genai_types.HttpOptions(api_version="")
-    if GEMINI_BASE_URL:
-        http_options = genai_types.HttpOptions(base_url=GEMINI_BASE_URL, api_version="")
-    return genai.Client(api_key=GEMINI_API_KEY, http_options=http_options)
+    return build_client()
 
 
 def load_prompt() -> str:

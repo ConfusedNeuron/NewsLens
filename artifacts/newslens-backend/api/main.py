@@ -61,6 +61,30 @@ def startup():
     from db.seed import seed_if_empty
     seed_if_empty()
 
+    # Validate Gemini AI integration proxy is reachable before starting the scheduler.
+    # This surfaces misconfigured endpoints immediately in logs instead of failing silently
+    # the first time the pipeline runs.
+    from agents.gemini_client import smoke_test as gemini_smoke_test
+    gemini_ok = gemini_smoke_test()
+    if gemini_ok:
+        logger.info("[Startup] Gemini AI proxy: OK — LLM pipeline will be active")
+    else:
+        logger.warning(
+            "[Startup] Gemini AI proxy: UNREACHABLE — pipeline will run but LLM stages "
+            "(extract, analyze) will be skipped until the proxy is available. "
+            "Check AI_INTEGRATIONS_GEMINI_BASE_URL and AI_INTEGRATIONS_GEMINI_API_KEY."
+        )
+
+    # Log Reddit credential status so operators know whether Reddit ingestion is active.
+    from config.settings import REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET
+    if REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET:
+        logger.info("[Startup] Reddit credentials: configured — r/india, r/worldnews, r/investing will be ingested")
+    else:
+        logger.warning(
+            "[Startup] Reddit credentials: NOT configured — Reddit ingestion will be skipped. "
+            "Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET secrets to enable it."
+        )
+
     try:
         from pipeline.orchestrator import start_scheduler
         _scheduler = start_scheduler()

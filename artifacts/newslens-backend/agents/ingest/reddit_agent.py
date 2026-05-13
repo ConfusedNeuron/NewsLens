@@ -1,4 +1,12 @@
-"""Reddit ingestion agent using PRAW."""
+"""Reddit ingestion agent using PRAW.
+
+Requires:
+  REDDIT_CLIENT_ID    — from https://www.reddit.com/prefs/apps (script app)
+  REDDIT_CLIENT_SECRET
+
+When either credential is missing the agent skips gracefully and logs a warning.
+The startup check in api/main.py surfaces this status at boot time.
+"""
 import uuid
 import logging
 from datetime import datetime
@@ -16,6 +24,15 @@ logger = logging.getLogger(__name__)
 
 SOURCES_PATH = Path(__file__).parent.parent.parent / "config" / "sources.yaml"
 
+# Check praw availability once at import time so errors are surfaced early.
+try:
+    import praw as _praw_module
+    _PRAW_AVAILABLE = True
+except ImportError:
+    _praw_module = None
+    _PRAW_AVAILABLE = False
+    logger.warning("[Reddit] praw package not installed — Reddit ingestion unavailable")
+
 
 def load_reddit_sources() -> list[dict]:
     with open(SOURCES_PATH) as f:
@@ -23,18 +40,32 @@ def load_reddit_sources() -> list[dict]:
     return data.get("reddit", [])
 
 
+def credentials_configured() -> bool:
+    """Return True if both Reddit API credentials are present in the environment."""
+    return bool(REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET)
+
+
 def get_reddit_client():
-    if not REDDIT_CLIENT_ID or not REDDIT_CLIENT_SECRET:
-        raise RuntimeError("Reddit credentials not configured (REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET)")
-    try:
-        import praw
-        return praw.Reddit(
-            client_id=REDDIT_CLIENT_ID,
-            client_secret=REDDIT_CLIENT_SECRET,
-            user_agent=REDDIT_USER_AGENT,
+    """Build and return an authenticated PRAW Reddit client.
+
+    Raises RuntimeError with a clear message if credentials are missing or praw
+    is not installed — callers should catch this and log rather than crash.
+    """
+    if not _PRAW_AVAILABLE:
+        raise RuntimeError(
+            "praw is not installed. Run: pip install praw"
         )
-    except ImportError:
-        raise RuntimeError("praw not installed")
+    if not credentials_configured():
+        raise RuntimeError(
+            "Reddit credentials not configured. "
+            "Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET environment secrets. "
+            "Create a 'script' app at https://www.reddit.com/prefs/apps to obtain them."
+        )
+    return _praw_module.Reddit(
+        client_id=REDDIT_CLIENT_ID,
+        client_secret=REDDIT_CLIENT_SECRET,
+        user_agent=REDDIT_USER_AGENT,
+    )
 
 
 def ingest_subreddit(reddit, source: dict) -> int:
@@ -115,8 +146,12 @@ def ingest_subreddit(reddit, source: dict) -> int:
 
 def run() -> int:
     sources = load_reddit_sources()
-    if not REDDIT_CLIENT_ID:
-        logger.warning("[Reddit] Skipping — REDDIT_CLIENT_ID not configured")
+    if not credentials_configured():
+        logger.warning(
+            "[Reddit] Skipping — REDDIT_CLIENT_ID and/or REDDIT_CLIENT_SECRET not configured. "
+            "Set these secrets to enable ingestion from: %s",
+            ", ".join(f"r/{s['subreddit']}" for s in sources),
+        )
         return 0
     try:
         reddit = get_reddit_client()
