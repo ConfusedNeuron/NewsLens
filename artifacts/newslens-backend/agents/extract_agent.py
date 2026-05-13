@@ -30,10 +30,11 @@ def get_client():
     if not GEMINI_API_KEY:
         raise RuntimeError("AI_INTEGRATIONS_GEMINI_API_KEY not configured")
     from google import genai
-    http_options = {}
+    from google.genai import types as genai_types
+    http_options = genai_types.HttpOptions(api_version="")
     if GEMINI_BASE_URL:
-        http_options["base_url"] = GEMINI_BASE_URL
-    return genai.Client(api_key=GEMINI_API_KEY, http_options=http_options if http_options else None)
+        http_options = genai_types.HttpOptions(base_url=GEMINI_BASE_URL, api_version="")
+    return genai.Client(api_key=GEMINI_API_KEY, http_options=http_options)
 
 
 def load_prompt() -> str:
