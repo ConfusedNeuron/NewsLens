@@ -111,10 +111,13 @@ def analyze_item(client, enriched: dict, sop: dict, user_profile: dict | None = 
                 contents=prompt,
                 config=genai_types.GenerateContentConfig(
                     temperature=0.3,
-                    max_output_tokens=1200,
+                    max_output_tokens=8192,
                     response_mime_type="application/json",
                 ),
             )
+            if not response.text:
+                logger.warning(f"Empty response from LLM (attempt {attempt + 1})")
+                continue
             content = response.text.strip()
             if content.startswith("```"):
                 content = content.split("```")[1]
