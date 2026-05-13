@@ -147,9 +147,9 @@ export function NewsCard({ card, profile, compact }: NewsCardProps) {
         {card.summary}
       </p>
 
-      {/* Row 4: Key number chip */}
-      {card.key_number && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", flexShrink: 0 }}>
+      {/* Row 4: Key number + time horizon chips */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", flexShrink: 0 }}>
+        {card.key_number && (
           <span
             style={{
               fontFamily: "'JetBrains Mono', monospace",
@@ -164,8 +164,23 @@ export function NewsCard({ card, profile, compact }: NewsCardProps) {
           >
             {card.key_number}
           </span>
-        </div>
-      )}
+        )}
+        <span
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: compact ? 12 : 13,
+            fontWeight: 600,
+            color: "#8888AA",
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 6,
+            padding: "4px 10px",
+          }}
+          title="Estimated time horizon for this story's impact"
+        >
+          ⏱ Near-term
+        </span>
+      </div>
 
       {/* Divider */}
       <div style={{ height: 1, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
