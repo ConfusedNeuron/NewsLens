@@ -69,10 +69,16 @@ def extract_item(client, clean: dict) -> dict | None:
                     response_mime_type="application/json",
                 ),
             )
-            if not response.text:
+            # response.text may be None for thinking-model responses even on success.
+            # Fall back to extracting text from the first candidate's parts.
+            content = response.text
+            if not content and response.candidates:
+                parts = response.candidates[0].content.parts if response.candidates[0].content else []
+                content = "".join(p.text for p in parts if hasattr(p, "text") and p.text)
+            if not content:
                 logger.warning(f"Empty response from LLM (attempt {attempt + 1})")
                 continue
-            content = response.text.strip()
+            content = content.strip()
             if content.startswith("```"):
                 content = content.split("```")[1]
                 if content.startswith("json"):

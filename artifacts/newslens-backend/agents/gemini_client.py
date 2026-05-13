@@ -22,18 +22,21 @@ _EXPECTED_PATH_SEGMENT = "modelfarm"
 
 
 def _validate_base_url(base_url: str) -> None:
-    """Raise if the base URL does not look like the Replit modelfarm proxy."""
+    """Raise if the base URL is missing or doesn't look like the Replit modelfarm proxy.
+
+    A missing or wrong base URL would cause every LLM call to fail silently at
+    runtime. Hard-failing here ensures misconfiguration surfaces immediately.
+    """
     if not base_url:
         raise RuntimeError(
             "AI_INTEGRATIONS_GEMINI_BASE_URL is not set. "
             "Run setupReplitAIIntegrations in the JS sandbox to provision it."
         )
     if _EXPECTED_PATH_SEGMENT not in base_url:
-        logger.warning(
-            "[GeminiClient] AI_INTEGRATIONS_GEMINI_BASE_URL does not contain '%s'. "
-            "Expected the Replit modelfarm proxy URL. Got: %s",
-            _EXPECTED_PATH_SEGMENT,
-            base_url,
+        raise RuntimeError(
+            f"AI_INTEGRATIONS_GEMINI_BASE_URL does not contain '{_EXPECTED_PATH_SEGMENT}' — "
+            f"this does not look like the Replit modelfarm proxy URL. Got: {base_url!r}. "
+            "Re-run setupReplitAIIntegrations to reprovision the correct value."
         )
 
 
