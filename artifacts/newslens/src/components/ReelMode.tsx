@@ -93,6 +93,8 @@ export function ReelMode({ cards, profile }: ReelModeProps) {
 
       {/* Dot indicators — bottom center */}
       <div
+        role="tablist"
+        aria-label="Card navigation"
         style={{
           position: "absolute",
           bottom: 16,
@@ -103,9 +105,19 @@ export function ReelMode({ cards, profile }: ReelModeProps) {
           alignItems: "center",
         }}
       >
-        {cards.map((_, i) => (
-          <div
-            key={i}
+        {cards.map((card, i) => (
+          <button
+            key={card.id}
+            role="tab"
+            aria-selected={i === currentIdx}
+            aria-label={`Go to card ${i + 1} of ${cards.length}`}
+            tabIndex={0}
+            onClick={() => {
+              const el = containerRef.current;
+              if (el) {
+                el.scrollTo({ top: i * el.clientHeight, behavior: "smooth" });
+              }
+            }}
             style={{
               width: i === currentIdx ? 16 : 6,
               height: 6,
@@ -113,13 +125,12 @@ export function ReelMode({ cards, profile }: ReelModeProps) {
               background: i === currentIdx ? "#00D4AA" : "rgba(255,255,255,0.15)",
               transition: "all 0.2s ease",
               cursor: "pointer",
+              border: "none",
+              padding: 0,
+              outline: "none",
             }}
-            onClick={() => {
-              const el = containerRef.current;
-              if (el) {
-                el.scrollTo({ top: i * el.clientHeight, behavior: "smooth" });
-              }
-            }}
+            onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 0 2px #00D4AA"; }}
+            onBlur={(e) => { e.currentTarget.style.boxShadow = "none"; }}
           />
         ))}
       </div>

@@ -353,7 +353,33 @@ function EmptyState({ onReset }: { onReset: () => void }) {
   );
 }
 
+function useNextUpdateCountdown() {
+  const [label, setLabel] = useState("");
+
+  useEffect(() => {
+    function compute() {
+      const now = new Date();
+      // Next update at the next 6-hour boundary: 0:00, 6:00, 12:00, 18:00
+      const nextH = Math.ceil((now.getHours() + now.getMinutes() / 60) / 6) * 6;
+      const next = new Date(now);
+      next.setHours(nextH % 24, 0, 0, 0);
+      if (next <= now) next.setDate(next.getDate() + 1);
+      const diffMs = next.getTime() - now.getTime();
+      const h = Math.floor(diffMs / 3600000);
+      const m = Math.floor((diffMs % 3600000) / 60000);
+      if (h > 0) setLabel(`${h}h ${m}m`);
+      else setLabel(`${m}m`);
+    }
+    compute();
+    const id = setInterval(compute, 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  return label;
+}
+
 function DoneState({ onReset }: { onReset: () => void }) {
+  const countdown = useNextUpdateCountdown();
   return (
     <div
       style={{
@@ -399,7 +425,7 @@ function DoneState({ onReset }: { onReset: () => void }) {
           margin: 0,
         }}
       >
-        Next update in a few hours.
+        {countdown ? `Next update in ${countdown}.` : "Next update in a few hours."}
       </p>
       <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
         <button
