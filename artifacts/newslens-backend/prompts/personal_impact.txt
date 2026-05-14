@@ -1,0 +1,17 @@
+You are personalizing a news impact analysis for a specific user.
+
+EVENT ANALYSIS:
+{analysis_json}
+
+USER PROFILE:
+- Income type: {income_type}
+- Sector exposure: {sector_exposure}
+- Investment profile: {investment_profile}
+- City: {city}
+- Companies they watch: {companies_of_interest}
+
+Write 2 sentences explaining how this specific news event affects THIS person, given their profile.
+Be direct and specific. Mention their actual investment type, city, or sector where relevant.
+If the event is not relevant to their profile, say so honestly in one sentence.
+
+Return ONLY the 2-sentence text. No JSON, no formatting, no preamble.

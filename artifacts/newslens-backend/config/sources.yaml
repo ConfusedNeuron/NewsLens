@@ -1,0 +1,116 @@
+rss:
+  - name: "Economic Times"
+    url: "https://economictimes.indiatimes.com/rssfeeds/1977021501.cms"
+    domain: Finance
+    geo: India
+    credibility: high
+
+  - name: "Mint"
+    url: "https://www.livemint.com/rss/markets"
+    domain: Finance
+    geo: India
+    credibility: high
+
+  - name: "Reuters Business"
+    url: "https://feeds.reuters.com/reuters/businessNews"
+    domain: Finance
+    geo: Global
+    credibility: high
+
+  - name: "TechCrunch"
+    url: "https://techcrunch.com/feed/"
+    domain: Tech
+    geo: Global
+    credibility: high
+
+  - name: "Hacker News"
+    url: "https://hnrss.org/frontpage"
+    domain: Tech
+    geo: Global
+    credibility: medium
+
+  - name: "BBC World News"
+    url: "http://feeds.bbci.co.uk/news/world/rss.xml"
+    domain: Geopolitics
+    geo: Global
+    credibility: high
+
+  - name: "The Hindu"
+    url: "https://www.thehindu.com/news/feeder/default.rss"
+    domain: Geopolitics
+    geo: India
+    credibility: high
+
+  - name: "South China Morning Post"
+    url: "https://www.scmp.com/rss/91/feed"
+    domain: Geopolitics
+    geo: China
+    credibility: medium
+
+  - name: "Carbon Brief"
+    url: "https://www.carbonbrief.org/feed/"
+    domain: Environment
+    geo: Global
+    credibility: high
+
+  - name: "Down To Earth"
+    url: "https://www.downtoearth.org.in/rss/latest"
+    domain: Environment
+    geo: India
+    credibility: high
+
+reddit:
+  - subreddit: "india"
+    domain: Geopolitics
+    geo: India
+
+  - subreddit: "worldnews"
+    domain: Geopolitics
+    geo: Global
+
+  - subreddit: "investing"
+    domain: Finance
+    geo: Global
+
+  - subreddit: "StockMarketIndia"
+    domain: Finance
+    geo: India
+
+  - subreddit: "technology"
+    domain: Tech
+    geo: Global
+
+  - subreddit: "Sino"
+    domain: Geopolitics
+    geo: China
+
+  - subreddit: "environment"
+    domain: Environment
+    geo: Global
+
+  - subreddit: "Economics"
+    domain: Finance
+    geo: Global
+
+  - subreddit: "geopolitics"
+    domain: Geopolitics
+    geo: Global
+
+substack:
+  - name: "Finshots"
+    url: "https://finshots.in/feed"
+    domain: Finance
+    geo: India
+    credibility: high
+
+  - name: "Import AI"
+    url: "https://importai.substack.com/feed"
+    domain: Tech
+    geo: Global
+    credibility: high
+
+  - name: "The Overshoot"
+    url: "https://theovershoot.co/feed"
+    domain: Environment
+    geo: Global
+    credibility: medium
