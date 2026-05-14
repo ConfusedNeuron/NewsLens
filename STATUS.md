@@ -31,7 +31,7 @@
 ## Required API Keys / Secrets
 
 | Secret | Purpose | Status at this snapshot |
-|--------|---------|--------|
+|--------|---------|------------------------|
 | `AI_INTEGRATIONS_GEMINI_BASE_URL` | Gemini AI proxy URL | Set (Replit-managed) |
 | `AI_INTEGRATIONS_GEMINI_API_KEY` | Gemini AI proxy key | Set (Replit-managed) |
 | `REDDIT_CLIENT_ID` | Reddit API — create app at reddit.com/prefs/apps | **Not set** |
