@@ -9,6 +9,11 @@ class Winner(BaseModel):
     who: str
     why: str
     magnitude: str
+    # Provenance of `magnitude`: "data" = taken from the enrichment payload or from
+    # facts extracted out of the article; "estimate" = the model's own inference.
+    # Defaults to "estimate" so an unlabelled figure can never be mistaken for a
+    # sourced one. See prompts/analyze.txt MAGNITUDE RULES.
+    magnitude_source: str = "estimate"
 
 
 class CardAngles(BaseModel):
@@ -27,6 +32,15 @@ class CardSource(BaseModel):
     url: str
 
 
+class MarketQuote(BaseModel):
+    """One instrument's snapshot, flattened for display."""
+    label: str
+    symbol: Optional[str] = None
+    price: Optional[float] = None
+    pct_change_1d: Optional[float] = None
+    currency: Optional[str] = None
+
+
 class CardResponse(BaseModel):
     id: str
     headline: str
@@ -38,7 +52,16 @@ class CardResponse(BaseModel):
     angles: CardAngles = CardAngles()
     tags: CardTags = CardTags()
     confidence: str = "medium"
+    # immediate | short | long — was hardcoded to "Near-term" in the UI because it
+    # never made it out of the pipeline.
+    time_horizon: Optional[str] = None
+    # The enrichment snapshot the analysis was anchored to. Lets the UI show the
+    # actual numbers instead of leaving them buried in prose.
+    market_data: list[MarketQuote] = []
     source: CardSource = CardSource(name="", url="")
+    # True for demo rows inserted by db/seed.py. Clients should label these; they are
+    # invented examples, not real news.
+    is_seed: bool = False
     created_at: str
 
 

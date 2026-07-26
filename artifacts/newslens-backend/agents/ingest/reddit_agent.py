@@ -53,8 +53,10 @@ def ingest_subreddit(reddit, source: dict) -> int:
     for post in posts:
         if post.score < REDDIT_SCORE_THRESHOLD:
             continue
+        # Skip link posts with no body text — they carry a headline and nothing else,
+        # which the Extract station cannot quantify. (Was a no-op `pass` until 2026-07-26.)
         if post.is_self is False and not post.selftext:
-            pass
+            continue
         if hasattr(post, "crosspost_parent"):
             continue
 

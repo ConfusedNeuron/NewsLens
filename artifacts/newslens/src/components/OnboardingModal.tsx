@@ -6,42 +6,14 @@ interface OnboardingModalProps {
   onDismiss: () => void;
 }
 
-const INCOME_OPTIONS = [
-  "Salaried Employee",
-  "Business Owner",
-  "Investor / Trader",
-  "Student",
-];
-
-const SECTOR_OPTIONS = [
-  "IT / Software",
-  "Banking & Finance",
-  "Real Estate",
-  "Manufacturing",
-  "Healthcare",
-  "Education",
-  "None / Not sure",
-];
-
-const INVESTMENT_OPTIONS = [
-  "Mostly FDs & savings",
-  "Mutual funds / SIPs",
-  "Direct stocks",
-  "Crypto",
-  "No investments",
-];
-
-const CITY_OPTIONS = [
-  "Mumbai",
-  "Delhi",
-  "Bengaluru",
-  "Hyderabad",
-  "Chennai",
-  "Pune",
-  "Ahmedabad",
-  "Kolkata",
-  "Other",
-];
+// Options now live in one shared module so this modal and the /profile page cannot
+// drift apart again. See src/lib/profile-vocab.ts for the history.
+import {
+  INCOME_OPTIONS,
+  SECTOR_OPTIONS,
+  INVESTMENT_OPTIONS,
+  CITY_OPTIONS,
+} from "@/lib/profile-vocab";
 
 const STEPS = 5;
 

@@ -11,11 +11,19 @@ rss:
     geo: India
     credibility: high
 
-  - name: "Reuters Business"
-    url: "https://feeds.reuters.com/reuters/businessNews"
-    domain: Finance
-    geo: Global
-    credibility: high
+  # REMOVED 2026-07-26: "Reuters Business" (https://feeds.reuters.com/reuters/businessNews)
+  # Reuters discontinued its public RSS feeds; the URL returned 0 items in every run
+  # since the project began and nothing alerted on it. Do not re-add without verifying.
+  #
+  # NOT YET ADDED — primary sources, blocked on full-text fetching:
+  #   RBI press releases  https://www.rbi.org.in/pressreleases_rss.xml
+  #   PIB press releases  https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3
+  # Both verified live on 2026-07-26, but both emit <title> + <link> only with no item
+  # <description>. The Extract station would see a headline and nothing else, which is
+  # strictly worse than the current snippet feeds. PIB additionally redirects to Hindi
+  # (Lang=2). Add these the same day trafilatura full-text fetching lands — at that point
+  # they become the highest-value sources in the config, because press releases carry
+  # hard numbers in the body.
 
   - name: "TechCrunch"
     url: "https://techcrunch.com/feed/"
@@ -53,13 +61,20 @@ rss:
     geo: Global
     credibility: high
 
-  - name: "Down To Earth"
-    url: "https://www.downtoearth.org.in/rss/latest"
+  # REPLACES "Down To Earth" (https://www.downtoearth.org.in/rss/latest), which returned
+  # 0 items in every run. Mongabay India verified live 2026-07-26 with full item bodies.
+  - name: "Mongabay India"
+    url: "https://india.mongabay.com/feed/"
     domain: Environment
     geo: India
     credibility: high
 
-reddit:
+# Reddit ingest is DISABLED until credentials are set.
+# The agent returns 0 and logs a warning when REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET
+# are unset, which is silent enough that it went unnoticed for two months.
+# To enable: create an app at https://reddit.com/prefs/apps, put the id/secret in .env,
+# then move these entries back under an active `reddit:` key.
+reddit_disabled:
   - subreddit: "india"
     domain: Geopolitics
     geo: India

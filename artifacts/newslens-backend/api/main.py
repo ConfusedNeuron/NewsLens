@@ -27,10 +27,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# CORS.
+#
+# `allow_origins=["*"]` together with `allow_credentials=True` is an invalid
+# combination — browsers reject credentialed responses from a wildcard origin, so the
+# previous config would have silently failed the moment cookie auth was introduced.
+# Origins are now explicit and overridable, and credentials are only enabled when the
+# origin list is explicit.
+_default_origins = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
+ALLOWED_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", _default_origins).split(",") if o.strip()]
+_allow_all = ALLOWED_ORIGINS == ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=not _allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -58,15 +69,24 @@ def startup():
     logger.info("NewsLens API starting up...")
     init_db()
 
-    from db.seed import seed_if_empty
-    seed_if_empty()
+    # Demo cards are NOT seeded here any more.
+    #
+    # Startup used to call seed_if_empty(), which inserted 15 fabricated stories
+    # whenever the live card count hit zero. That turned any pipeline failure or LLM
+    # outage into a feed silently repopulated with invented news, indistinguishable
+    # from real output. Seeding is now explicit: `python db/seed.py --demo`.
 
-    try:
-        from pipeline.orchestrator import start_scheduler
-        _scheduler = start_scheduler()
-        app.state.scheduler = _scheduler
-    except Exception as e:
-        logger.warning(f"Scheduler not started: {e}")
+    # The scheduler is opt-in too. Importing this module in a test or a one-off
+    # script should not start a background job that spends LLM credits.
+    if os.getenv("ENABLE_SCHEDULER", "1") not in ("0", "false", "False"):
+        try:
+            from pipeline.orchestrator import start_scheduler
+            _scheduler = start_scheduler()
+            app.state.scheduler = _scheduler
+        except Exception as e:
+            logger.warning(f"Scheduler not started: {e}")
+    else:
+        logger.info("Scheduler disabled via ENABLE_SCHEDULER=0")
 
     logger.info("NewsLens API ready")
 

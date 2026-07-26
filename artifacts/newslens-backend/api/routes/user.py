@@ -16,8 +16,21 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+@router.put("/user/profile", response_model=UserProfileResponse)
 @router.post("/user/profile", response_model=UserProfileResponse)
 def save_profile(profile: UserProfileRequest):
+    """
+    Create or update a user profile (upsert).
+
+    Registered on BOTH verbs deliberately. The OpenAPI spec declares `put`, so the
+    generated Orval client sends PUT — but only `post` was registered here, which
+    meant every profile save from onboarding and from /profile returned 405, and the
+    frontend mutation had no error handler to surface it. The result was that no
+    profile was ever saved and `personal_impact` could never render.
+
+    PUT is the spec-correct verb for an idempotent upsert; POST is kept so that any
+    older client build keeps working. tests/test_api.py asserts both.
+    """
     now = datetime.utcnow().isoformat()
     existing = fetchone("SELECT user_id FROM user_profiles WHERE user_id = ?", (profile.user_id,))
 

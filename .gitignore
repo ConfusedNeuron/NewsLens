@@ -47,3 +47,20 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Local databases
+*.db
+*.db-wal
+*.db-shm
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.sqlite
+*.sqlite3

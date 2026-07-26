@@ -5,6 +5,37 @@ import { ArrowLeft, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 
+/**
+ * Magnitude with provenance. Mirrors ImpactRow in NewsCard.tsx: figures the model
+ * inferred rather than read from the enrichment payload are labelled and demoted,
+ * so a reader can tell which numbers are sourced. Unlabelled means estimate.
+ * The detail page previously dropped `magnitude` altogether.
+ */
+function Magnitude({ item }: { item: any }) {
+  if (!item?.magnitude) return null;
+  const isSourced = item.magnitude_source === "data";
+  return (
+    <span
+      className={`block mt-1 text-xs ${isSourced ? "text-muted-foreground" : "text-muted-foreground/60 italic"}`}
+      title={
+        isSourced
+          ? "Figure taken from market data or from the source article."
+          : "Model estimate — not from a verified data source."
+      }
+    >
+      {!isSourced && (
+        <span
+          className="not-italic mr-1.5 rounded border border-border px-1 py-px text-[9px] font-bold uppercase tracking-wide"
+          aria-label="Model estimate, not from a verified data source"
+        >
+          est
+        </span>
+      )}
+      {item.magnitude}
+    </span>
+  );
+}
+
 export default function CardDetail() {
   const params = useParams();
   const id = params.id as string;
@@ -78,6 +109,7 @@ export default function CardDetail() {
                   <li key={i} className="text-sm">
                     <span className="font-bold block text-foreground">{w.who}</span>
                     <span className="text-muted-foreground">{w.why}</span>
+                    <Magnitude item={w} />
                   </li>
                 ))}
               </ul>
@@ -94,6 +126,7 @@ export default function CardDetail() {
                   <li key={i} className="text-sm">
                     <span className="font-bold block text-foreground">{l.who}</span>
                     <span className="text-muted-foreground">{l.why}</span>
+                    <Magnitude item={l} />
                   </li>
                 ))}
               </ul>

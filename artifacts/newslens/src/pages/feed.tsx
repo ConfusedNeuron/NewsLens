@@ -1,5 +1,13 @@
 import { useState, useEffect } from "react";
-import { useListCards, getListCardsQueryKey, useUpdateUserProfile } from "@/api";
+import {
+  useListCards,
+  getListCardsQueryKey,
+  useUpdateUserProfile,
+  useGetUserProfile,
+  usePersonalizedCards,
+} from "@/api";
+import { getGetUserProfileQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Card } from "@/api";
 import { NLHeader, ViewMode } from "@/components/NLHeader";
 import { NLFilterBar } from "@/components/NLFilterBar";
@@ -7,6 +15,10 @@ import { SwipeMode } from "@/components/SwipeMode";
 import { ReelMode } from "@/components/ReelMode";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { UserProfile } from "@/components/NewsCard";
+import { useToast } from "@/hooks/use-toast";
+import { sectorsToArray, sectorsToString } from "@/lib/profile-vocab";
+
+const USER_ID = "default_user";
 
 const LS_PROFILE = "newslens_profile";
 const LS_MODE = "newslens_mode";
@@ -36,12 +48,35 @@ export default function Feed() {
   const [domain, setDomain] = useState<string | null>(() => loadLS(LS_DOMAIN, null));
   const [geos, setGeos] = useState<string[]>(() => loadLS(LS_GEOS, []));
   const [showUncertain, setShowUncertain] = useState<boolean>(() => loadLS(LS_UNCERTAIN, false));
-  const [profile, setProfile] = useState<UserProfile | null>(() => loadLS(LS_PROFILE, null));
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [swipeQueue, setSwipeQueue] = useState<Card[] | null>(null);
   const [feedDone, setFeedDone] = useState(false);
 
   const saveProfileMutation = useUpdateUserProfile();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // The API is the single source of truth for the profile.
+  //
+  // This used to read localStorage while the /profile page read the API, so the two
+  // screens maintained separate copies and edits made on /profile never reached the
+  // feed's personal-impact gate. localStorage is still written, but only as an
+  // offline fallback for the very first paint — never as the authority.
+  const { data: apiProfile } = useGetUserProfile(
+    { user_id: USER_ID },
+    { query: { queryKey: getGetUserProfileQueryKey({ user_id: USER_ID }), retry: false } },
+  );
+
+  const cachedProfile = loadLS<UserProfile | null>(LS_PROFILE, null);
+  const profile: UserProfile | null = apiProfile
+    ? {
+        income_type: apiProfile.income_type ?? "",
+        sector_exposure: sectorsToArray(apiProfile.sector_exposure),
+        investment_profile: apiProfile.investment_profile ?? "",
+        city: apiProfile.city ?? "",
+        companies_of_interest: apiProfile.companies_of_interest ?? "",
+      }
+    : cachedProfile;
 
   const params = {
     limit: 50,
@@ -49,9 +84,20 @@ export default function Feed() {
     ...(domain ? { domain } : {}),
   };
 
-  const { data, isLoading, error } = useListCards(params, {
+  const { data: globalData, isLoading, error } = useListCards(params, {
     query: { queryKey: getListCardsQueryKey(params) },
   });
+
+  // When a profile exists on the server, prefer the personalized feed — same cards,
+  // narrowed to the user's sectors, with `personal_impact` filled in by the read-time
+  // pass. If it errors or returns nothing we fall through to the global feed, so a
+  // personalization outage costs the personal paragraph and nothing else.
+  const { data: personalData } = usePersonalizedCards(
+    { user_id: USER_ID, limit: 50, page: 1, ...(domain ? { domain } : {}) },
+    { enabled: !!apiProfile },
+  );
+
+  const data = personalData ?? globalData;
 
   // Show onboarding on first visit (no profile AND not explicitly dismissed)
   useEffect(() => {
@@ -101,20 +147,41 @@ export default function Feed() {
   }
 
   function handleOnboardingComplete(p: UserProfile) {
-    setProfile(p);
     saveLS(LS_PROFILE, p);
     saveLS(LS_ONBOARDED, true);
-    // POST to API
-    saveProfileMutation.mutate({
-      data: {
-        user_id: "default_user",
-        income_type: p.income_type,
-        sector_exposure: p.sector_exposure.join(", "),
-        investment_profile: p.investment_profile,
-        city: p.city,
-        companies_of_interest: p.companies_of_interest,
+    saveProfileMutation.mutate(
+      {
+        data: {
+          user_id: USER_ID,
+          income_type: p.income_type,
+          sector_exposure: sectorsToString(p.sector_exposure),
+          investment_profile: p.investment_profile,
+          city: p.city,
+          companies_of_interest: p.companies_of_interest,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          // Re-read the profile from the API so the feed's personal-impact gate
+          // opens against server state rather than the local copy.
+          queryClient.invalidateQueries({
+            queryKey: getGetUserProfileQueryKey({ user_id: USER_ID }),
+          });
+        },
+        // This mutation previously had no error handler at all, which is how a
+        // 405 on every single save went unnoticed for two months.
+        onError: (err: unknown) => {
+          toast({
+            variant: "destructive",
+            title: "Could not save your profile",
+            description:
+              err instanceof Error
+                ? err.message
+                : "Personalised impact will stay off until this succeeds.",
+          });
+        },
+      },
+    );
   }
 
   function handleOnboardingDismiss() {

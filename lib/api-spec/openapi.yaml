@@ -42,6 +42,10 @@ paths:
           in: query
           schema:
             type: ["string", "null"]
+        # `search` is declared here but NOT implemented by the backend, which accepts
+        # geo + confidence instead (api/routes/cards.py). Left in place because
+        # removing it would change the generated client signature; reconcile the two
+        # when the spec is next regenerated from FastAPI.
         - name: search
           in: query
           schema:
@@ -63,6 +67,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CardList"
+
+  /cards/personalized:
+    get:
+      operationId: listPersonalizedCards
+      tags: [cards]
+      summary: List cards filtered to the user's sectors, with personal impact filled in
+      description: >
+        Same shape as /cards, with two differences: results are narrowed to the
+        sectors declared in the user's profile, and `personal_impact` is populated
+        by a read-time personalization pass (cached per card per profile version).
+        Returns 404 if the user has no saved profile.
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: domain
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: geo
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Personalized card list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardList"
+        "404":
+          description: No profile saved for this user
 
   /cards/{id}:
     get:
@@ -214,6 +262,30 @@ components:
           type: string
         magnitude:
           type: string
+        magnitude_source:
+          description: >
+            Provenance of the figure in `magnitude`. "data" means it came from the
+            enrichment payload (yfinance / FRED) or from facts extracted out of the
+            article itself. "estimate" means the model inferred it from background
+            knowledge. Clients MUST visually distinguish the two. Absent is treated
+            as "estimate" — the analyze agent demotes anything unrecognised.
+          type: string
+          enum: [data, estimate]
+
+    MarketQuote:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+        symbol:
+          type: ["string", "null"]
+        price:
+          type: ["number", "null"]
+        pct_change_1d:
+          type: ["number", "null"]
+        currency:
+          type: ["string", "null"]
 
     CardAngles:
       type: object
@@ -267,7 +339,26 @@ components:
           items:
             $ref: "#/components/schemas/Winner"
         personal_impact:
+          description: >
+            Filled only by /cards/personalized. /cards returns null here because
+            cards are generated globally and shared between users.
           type: ["string", "null"]
+        time_horizon:
+          type: ["string", "null"]
+          enum: [immediate, short, long, null]
+        market_data:
+          description: >
+            Snapshot of the market/macro figures the analysis was anchored to.
+            Empty when enrichment found nothing relevant.
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketQuote"
+        is_seed:
+          description: >
+            True for demo rows from db/seed.py. These are invented examples, not
+            real news, and clients must label them as such.
+          type: boolean
+          default: false
         angles:
           $ref: "#/components/schemas/CardAngles"
         tags:

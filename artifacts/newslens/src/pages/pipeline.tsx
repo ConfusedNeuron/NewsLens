@@ -10,13 +10,25 @@ export default function Pipeline() {
   });
   const logs = Array.isArray(logsData) ? logsData : (logsData as any)?.logs ?? [];
 
+  // The backend writes 'complete' (pipeline/orchestrator.py log_stage calls).
+  // This switch previously only matched 'success', so every successful stage
+  // fell through to the neutral clock icon and the page looked permanently idle.
+  // Both spellings are accepted so old rows in pipeline_runs still render correctly.
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case 'complete':
       case 'success': return <CheckCircle2 className="w-4 h-4 text-chart-1" />;
       case 'failed': return <AlertCircle className="w-4 h-4 text-destructive" />;
       case 'running': return <Loader2 className="w-4 h-4 text-primary animate-spin" />;
       default: return <Clock className="w-4 h-4 text-muted-foreground" />;
     }
+  };
+
+  const formatDuration = (startedAt?: string, completedAt?: string) => {
+    if (!startedAt || !completedAt) return '-';
+    const ms = new Date(completedAt).getTime() - new Date(startedAt).getTime();
+    if (!Number.isFinite(ms) || ms < 0) return '-';
+    return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
   };
 
   return (
@@ -40,7 +52,7 @@ export default function Pipeline() {
                 <TableHead className="font-mono text-xs text-right">PROCESSED</TableHead>
                 <TableHead className="font-mono text-xs text-right">FAILED</TableHead>
                 <TableHead className="font-mono text-xs">STARTED</TableHead>
-                <TableHead className="font-mono text-xs">COMPLETED</TableHead>
+                <TableHead className="font-mono text-xs text-right">DURATION</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -73,8 +85,8 @@ export default function Pipeline() {
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {log.started_at ? new Date(log.started_at).toLocaleTimeString() : '-'}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {log.completed_at ? new Date(log.completed_at).toLocaleTimeString() : '-'}
+                  <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                    {formatDuration(log.started_at, log.completed_at)}
                   </TableCell>
                 </TableRow>
               ))}

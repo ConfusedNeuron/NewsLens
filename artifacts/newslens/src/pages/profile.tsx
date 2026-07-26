@@ -1,12 +1,19 @@
 import { useGetUserProfile, getGetUserProfileQueryKey, useUpdateUserProfile } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import {
+  INCOME_OPTIONS,
+  SECTOR_OPTIONS,
+  INVESTMENT_OPTIONS,
+  CITY_OPTIONS,
+  sectorsToArray,
+  sectorsToString,
+} from "@/lib/profile-vocab";
 
 export default function Profile() {
   const userId = "default_user";
@@ -43,10 +50,28 @@ export default function Profile() {
       onSuccess: () => {
         toast({
           title: "Profile Updated",
-          description: "Your intelligence filters have been recalibrated.",
+          description: "Your personal impact analysis will refresh on the next card load.",
         });
-      }
+      },
+      // Without this, a failing save was completely invisible: the PUT/POST verb
+      // mismatch returned 405 on every submit for months and the UI said nothing.
+      onError: (err: unknown) => {
+        toast({
+          variant: "destructive",
+          title: "Could not save profile",
+          description: err instanceof Error ? err.message : "The server rejected the request.",
+        });
+      },
     });
+  };
+
+  const selectedSectors = sectorsToArray(formData.sector_exposure);
+
+  const toggleSector = (sector: string) => {
+    const next = selectedSectors.includes(sector)
+      ? selectedSectors.filter((s) => s !== sector)
+      : [...selectedSectors, sector];
+    setFormData((p) => ({ ...p, sector_exposure: sectorsToString(next) }));
   };
 
   return (
@@ -71,10 +96,9 @@ export default function Profile() {
                 <SelectValue placeholder="Select primary income source" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="salary">Salary (W2/PAYE)</SelectItem>
-                <SelectItem value="business">Business Owner</SelectItem>
-                <SelectItem value="freelance">Freelance / Contractor</SelectItem>
-                <SelectItem value="investments">Investments / Passive</SelectItem>
+                {INCOME_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -86,32 +110,49 @@ export default function Profile() {
                 <SelectValue placeholder="Select risk tolerance" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="conservative">Conservative</SelectItem>
-                <SelectItem value="moderate">Moderate</SelectItem>
-                <SelectItem value="aggressive">Aggressive</SelectItem>
-                <SelectItem value="crypto_heavy">Crypto Heavy</SelectItem>
+                {INVESTMENT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label className="font-mono text-xs text-muted-foreground">SECTOR EXPOSURE</Label>
-              <Input 
-                value={formData.sector_exposure} 
-                onChange={(e) => setFormData(p => ({...p, sector_exposure: e.target.value}))}
-                placeholder="e.g. Tech, Real Estate"
-              />
+          <div className="space-y-2">
+            <Label className="font-mono text-xs text-muted-foreground">SECTOR EXPOSURE</Label>
+            <div className="flex flex-wrap gap-2">
+              {SECTOR_OPTIONS.map((sector) => {
+                const active = selectedSectors.includes(sector);
+                return (
+                  <button
+                    key={sector}
+                    type="button"
+                    onClick={() => toggleSector(sector)}
+                    aria-pressed={active}
+                    className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {sector}
+                  </button>
+                );
+              })}
             </div>
-            
-            <div className="space-y-2">
-              <Label className="font-mono text-xs text-muted-foreground">CITY</Label>
-              <Input 
-                value={formData.city} 
-                onChange={(e) => setFormData(p => ({...p, city: e.target.value}))}
-                placeholder="e.g. San Francisco"
-              />
-            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="font-mono text-xs text-muted-foreground">CITY</Label>
+            <Select value={formData.city} onValueChange={(val) => setFormData(p => ({...p, city: val}))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select your city" />
+              </SelectTrigger>
+              <SelectContent>
+                {CITY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

@@ -361,13 +361,15 @@ DEMO_CARDS = [
 ]
 
 
-def seed_if_empty():
-    """Insert demo cards only if the cards table is empty."""
-    count_row = fetchone("SELECT COUNT(*) as cnt FROM cards WHERE is_live = TRUE")
-    if count_row and count_row["cnt"] > 0:
-        logger.info(f"DB already has {count_row['cnt']} live cards — skipping seed")
-        return
+def seed_demo_cards() -> int:
+    """
+    Insert the demo cards, flagged `is_seed = TRUE`.
 
+    These stories are INVENTED. "Nifty 50 Crosses 27,000" never happened; it is
+    illustrative copy for developing the UI without running the pipeline. Every row
+    carries is_seed so the API can label them and so they can be removed in one
+    statement (`DELETE FROM cards WHERE is_seed = TRUE`).
+    """
     now = datetime.utcnow()
     with get_conn() as conn:
         for i, card in enumerate(DEMO_CARDS):
@@ -377,8 +379,8 @@ def seed_if_empty():
                 """INSERT OR IGNORE INTO cards
                    (id, headline, summary_60w, what_happened, key_number, winners_json, losers_json,
                     india_angle, usa_angle, china_angle, personal_impact, domain_tags, geo_tags,
-                    confidence_badge, source_name, source_url, is_live, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)""",
+                    confidence_badge, source_name, source_url, is_live, is_seed, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, ?)""",
                 (
                     card_id,
                     card.get("headline", ""),
@@ -399,12 +401,53 @@ def seed_if_empty():
                     created_at,
                 ),
             )
-    logger.info(f"Seeded {len(DEMO_CARDS)} demo cards")
+    logger.info(f"Seeded {len(DEMO_CARDS)} demo cards (is_seed = TRUE)")
+    return len(DEMO_CARDS)
+
+
+def seed_if_empty():
+    """
+    Deprecated — retained so any old caller fails loudly rather than silently
+    injecting fabricated news.
+
+    This used to run automatically on API startup whenever zero live cards existed,
+    which meant an LLM outage or an empty pipeline run would quietly repopulate the
+    feed with invented stories that were indistinguishable from real output. Seeding
+    is now an explicit, deliberate act: `python db/seed.py --demo`.
+    """
+    logger.warning(
+        "seed_if_empty() is deprecated and does nothing. "
+        "Run `python db/seed.py --demo` to insert demo cards explicitly."
+    )
+
+
+def clear_seed_cards() -> int:
+    """Remove every demo card. Real pipeline output is untouched."""
+    with get_conn() as conn:
+        cur = conn.execute("DELETE FROM cards WHERE is_seed = TRUE")
+        removed = cur.rowcount
+    logger.info(f"Removed {removed} seed cards")
+    return removed
 
 
 if __name__ == "__main__":
+    import argparse
+
     logging.basicConfig(level=logging.INFO)
+    parser = argparse.ArgumentParser(description="Manage NewsLens demo cards.")
+    parser.add_argument("--demo", action="store_true",
+                        help="insert the fabricated demo cards (flagged is_seed)")
+    parser.add_argument("--clear", action="store_true",
+                        help="delete all seed cards, leaving real ones")
+    args = parser.parse_args()
+
     from db.database import init_db
     init_db()
-    seed_if_empty()
-    print(f"Seeded {len(DEMO_CARDS)} cards")
+
+    if args.clear:
+        print(f"Removed {clear_seed_cards()} seed cards")
+    elif args.demo:
+        print(f"Seeded {seed_demo_cards()} demo cards")
+    else:
+        parser.print_help()
+        print("\nNothing done. Seeding is opt-in: these cards are invented news.")

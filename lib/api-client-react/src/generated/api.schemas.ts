@@ -9,10 +9,26 @@ export interface HealthStatus {
   status: string;
 }
 
+export type WinnerMagnitudeSource = (typeof WinnerMagnitudeSource)[keyof typeof WinnerMagnitudeSource];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const WinnerMagnitudeSource = {
+  data: "data",
+  estimate: "estimate",
+} as const;
+
 export interface Winner {
   who: string;
   why: string;
   magnitude: string;
+  /**
+   * Provenance of the figure in `magnitude`. "data" means it came from the
+   * enrichment payload (yfinance / FRED) or from facts extracted out of the
+   * article itself. "estimate" means the model inferred it from background
+   * knowledge. Clients MUST visually distinguish the two. Absent is treated
+   * as "estimate" — the analyze agent demotes anything unrecognised.
+   */
+  magnitude_source?: WinnerMagnitudeSource;
 }
 
 export interface CardAngles {
@@ -34,6 +50,20 @@ export interface CardSource {
   url: string;
 }
 
+export interface MarketQuote {
+  label: string;
+  /** @nullable */
+  symbol?: string | null;
+  /** @nullable */
+  price?: number | null;
+  /** @nullable */
+  pct_change_1d?: number | null;
+  /** @nullable */
+  currency?: string | null;
+}
+
+export type CardTimeHorizon = "immediate" | "short" | "long" | null;
+
 export interface Card {
   id: string;
   headline: string;
@@ -42,12 +72,22 @@ export interface Card {
   key_number?: string | null;
   winners?: Winner[];
   losers?: Winner[];
-  /** @nullable */
+  /**
+   * Filled only by /cards/personalized. /cards returns null here because cards
+   * are generated globally and shared between users.
+   * @nullable
+   */
   personal_impact?: string | null;
   angles?: CardAngles;
   tags?: CardTags;
   confidence: string;
+  /** @nullable */
+  time_horizon?: CardTimeHorizon;
+  /** Market/macro figures the analysis was anchored to. */
+  market_data?: MarketQuote[];
   source?: CardSource;
+  /** True for invented demo rows from db/seed.py — clients must label these. */
+  is_seed?: boolean;
   created_at: string;
 }
 

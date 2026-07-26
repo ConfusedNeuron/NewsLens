@@ -31,14 +31,16 @@ Return ONLY valid JSON in this exact structure:
     {
       "who": "Specific group or entity — e.g. 'Home loan borrowers', 'Nifty IT sector', 'Indian exporters'",
       "why": "Why they benefit — be specific",
-      "magnitude": "Estimated size of benefit — use enrichment data where possible"
+      "magnitude": "Size of benefit. See the MAGNITUDE RULES below.",
+      "magnitude_source": "ONE of: data | estimate"
     }
   ],
   "losers": [
     {
       "who": "Specific group or entity",
       "why": "Why they are hurt — be specific",
-      "magnitude": "Estimated size of damage"
+      "magnitude": "Size of damage. See the MAGNITUDE RULES below.",
+      "magnitude_source": "ONE of: data | estimate"
     }
   ],
   "india_angle": "2-3 sentences. Specifically how this plays out for India — markets, policy, people.",
@@ -49,11 +51,28 @@ Return ONLY valid JSON in this exact structure:
   "time_horizon": "ONE of: immediate | short | long"
 }
 
+MAGNITUDE RULES (read carefully — this is the most important part of the task):
+
+Every winner and loser carries a "magnitude_source" that tells the reader where its
+number came from. You must label it honestly.
+
+- "data"     — the number appears in MARKET & MACRO DATA or in EXTRACTED FACTS above.
+               Quote it accurately. Do not round it beyond recognition.
+- "estimate" — the number is your own inference from background knowledge.
+               This is allowed and often useful, but it MUST be labelled "estimate".
+
+Never label an inference as "data". A reader who cannot tell your estimates from
+sourced figures cannot trust either one. If you are unsure which applies, use "estimate".
+
+If you can say nothing quantitative at all, set "magnitude" to a short qualitative
+clause and "magnitude_source" to "estimate" — do not invent a precise-looking figure
+to fill the field. A card that says "exposure not quantifiable from available data"
+is more valuable here than a fabricated number.
+
 CRITICAL RULES:
 - Return ONLY the JSON object. No markdown, no preamble.
 - winners and losers must each have at least 1 entry (aim for 2).
-- magnitude must contain a number or estimate — not 'significant' or 'substantial'.
-- Anchor all numbers to the enrichment data. If the data is unavailable, use 'est.' prefix.
+- Every winner/loser object must include "magnitude_source".
 - personal_impact must be specific to the user profile — not generic.
 - If confidence is low, say so honestly. Do not overclaim.
 - Do not use emojis.

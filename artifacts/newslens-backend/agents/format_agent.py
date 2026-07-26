@@ -13,6 +13,22 @@ from db.database import get_conn, fetchall, fetchone, execute
 logger = logging.getLogger(__name__)
 
 
+#: extract_agent and analyze_agent use different spellings for the same concept.
+#: The API and UI speak only the right-hand side.
+_HORIZON_ALIASES = {
+    "immediate": "immediate",
+    "short": "short",
+    "short_term": "short",
+    "near_term": "short",
+    "long": "long",
+    "long_term": "long",
+}
+
+
+def _normalize_horizon(raw) -> str:
+    return _HORIZON_ALIASES.get(str(raw or "").strip().lower(), "short")
+
+
 def format_winner_loser(items: list) -> str:
     if not items:
         return ""
@@ -59,9 +75,27 @@ def map_to_card(enriched: dict, classified: dict, extracted: dict, clean: dict) 
     winners = analysis.get("winners", [])
     losers = analysis.get("losers", [])
 
+    # Market data actually reaching the card.
+    #
+    # Enrichment was fetched, injected into the analyze prompt, and then thrown away —
+    # no card field, no API field, nothing on screen. The numbers only ever surfaced
+    # as unattributed prose inside india_angle. Everything except the private
+    # "_analysis" key is now carried through so the UI can show what the analysis
+    # was actually looking at.
+    market_data = {k: v for k, v in enrichment.items() if k != "_analysis"}
+
+    # time_horizon is produced by both stations but the vocabularies differ:
+    # extract emits short_term/long_term, analyze emits short/long. Normalise here
+    # so exactly one spelling ever leaves the backend.
+    horizon = _normalize_horizon(
+        analysis.get("time_horizon") or extracted.get("time_horizon")
+    )
+
     card = {
         "id": str(uuid.uuid4()),
         "enriched_id": enriched["id"],
+        "time_horizon": horizon,
+        "market_data": json.dumps(market_data) if market_data else None,
         "headline": analysis.get("what_happened") or extracted.get("headline") or "",
         "summary_60w": analysis.get("summary_60w", ""),
         "what_happened": analysis.get("what_happened", ""),
@@ -106,15 +140,17 @@ def run() -> int:
                 """INSERT INTO cards
                    (id, enriched_id, headline, summary_60w, what_happened, key_number,
                     winners_json, losers_json, india_angle, usa_angle, china_angle, personal_impact,
-                    domain_tags, geo_tags, confidence_badge, source_name, source_url, is_live, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    domain_tags, geo_tags, confidence_badge, time_horizon, market_data,
+                    source_name, source_url, is_live, is_seed, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     card["id"], card["enriched_id"], card["headline"], card["summary_60w"],
                     card["what_happened"], card["key_number"], card["winners_json"],
                     card["losers_json"], card["india_angle"], card["usa_angle"],
                     card["china_angle"], card["personal_impact"], card["domain_tags"],
-                    card["geo_tags"], card["confidence_badge"], card["source_name"],
-                    card["source_url"], card["is_live"], card["created_at"],
+                    card["geo_tags"], card["confidence_badge"], card["time_horizon"],
+                    card["market_data"], card["source_name"],
+                    card["source_url"], card["is_live"], False, card["created_at"],
                 ),
             )
             conn.execute(

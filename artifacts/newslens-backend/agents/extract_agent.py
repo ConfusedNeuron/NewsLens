@@ -6,34 +6,32 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from typing import Optional
+
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from db.database import get_conn, fetchall, execute
-from config.settings import GEMINI_API_KEY, GEMINI_BASE_URL, GEMINI_MODEL, LLM_CALL_DELAY_SECONDS
+from config.settings import COMMANDCODE_API_KEY, LLM_CALL_DELAY_SECONDS
+from agents.llm_client import (
+    get_llm_client,
+    call_llm,
+    validate_extract_input,
+    InputValidationError,
+)
 
 logger = logging.getLogger(__name__)
 
 PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "extract.txt"
 
-REQUIRED_FIELDS = {"headline", "entities", "event_type", "numbers_mentioned",
-                   "geography_primary", "sector", "time_horizon", "source_credibility", "confidence"}
-
+REQUIRED_FIELDS  = {"headline", "entities", "event_type", "numbers_mentioned",
+                    "geography_primary", "sector", "time_horizon",
+                    "source_credibility", "confidence"}
 VALID_EVENT_TYPES = {"monetary_policy", "earnings", "regulation", "conflict",
                      "discovery", "market_move", "policy", "other"}
-VALID_GEOS = {"India", "USA", "China", "Global", "Continental"}
-VALID_CONFIDENCE = {"high", "medium", "low"}
-VALID_HORIZONS = {"immediate", "short_term", "long_term"}
-
-
-def get_client():
-    if not GEMINI_API_KEY:
-        raise RuntimeError("AI_INTEGRATIONS_GEMINI_API_KEY not configured")
-    from google import genai
-    http_options = {}
-    if GEMINI_BASE_URL:
-        http_options["base_url"] = GEMINI_BASE_URL
-    return genai.Client(api_key=GEMINI_API_KEY, http_options=http_options if http_options else None)
+VALID_GEOS        = {"India", "USA", "China", "Global", "Continental"}
+VALID_CONFIDENCE  = {"high", "medium", "low"}
+VALID_HORIZONS    = {"immediate", "short_term", "long_term"}
 
 
 def load_prompt() -> str:
@@ -42,10 +40,15 @@ def load_prompt() -> str:
 
 
 def validate_extraction(data: dict) -> bool:
+    """Validate LLM output schema — called AFTER the API response, not before."""
     if not REQUIRED_FIELDS.issubset(data.keys()):
+        missing = REQUIRED_FIELDS - set(data.keys())
+        logger.warning(f"[Extract] Output missing fields: {missing}")
         return False
     if not isinstance(data.get("entities"), dict):
+        logger.warning("[Extract] Output 'entities' is not a dict.")
         return False
+    # Coerce invalid enum values rather than discarding the item
     if data.get("event_type") not in VALID_EVENT_TYPES:
         data["event_type"] = "other"
     if data.get("geography_primary") not in VALID_GEOS:
@@ -57,63 +60,88 @@ def validate_extraction(data: dict) -> bool:
     return True
 
 
-def extract_item(client, clean: dict) -> dict | None:
-    from google.genai import types as genai_types
+def strip_json_fence(content: str) -> str:
+    """Remove ```json ... ``` wrappers that some models add despite instructions."""
+    if content.startswith("```"):
+        parts = content.split("```")
+        # parts[1] is the block between first and second fence
+        content = parts[1]
+        if content.startswith("json"):
+            content = content[4:]
+    return content.strip()
+
+
+def extract_item(client, clean: dict) -> Optional[dict]:
     prompt_template = load_prompt()
     text = clean["clean_text"][:4000]
     prompt = prompt_template.replace("{article_text}", text)
 
+    # ── INPUT VALIDATION (before any retry) ──────────────────────────────
+    # We check the data quality here so we never waste an API call on garbage.
+    # InputValidationError means "skip forever" — the caller handles it.
+    # ─────────────────────────────────────────────────────────────────────
+    validate_extract_input(text)  # raises InputValidationError if bad
+
+    # ── RETRY LOOP (only for transient LLM / network failures) ───────────
     for attempt in range(2):
         try:
-            response = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(
-                    temperature=0,
-                    max_output_tokens=800,
-                    response_mime_type="application/json",
-                ),
-            )
-            content = response.text.strip()
-            if content.startswith("```"):
-                content = content.split("```")[1]
-                if content.startswith("json"):
-                    content = content[4:]
+            content = call_llm(client, prompt, max_tokens=800, temperature=0)
+            content = strip_json_fence(content)
             data = json.loads(content)
             if validate_extraction(data):
                 return data
-            logger.warning(f"Invalid extraction schema (attempt {attempt + 1})")
+            logger.warning(f"[Extract] Invalid schema on attempt {attempt + 1} — retrying.")
         except json.JSONDecodeError as e:
-            logger.warning(f"JSON parse error (attempt {attempt + 1}): {e}")
+            logger.warning(f"[Extract] JSON parse error (attempt {attempt + 1}): {e}")
         except Exception as e:
-            logger.error(f"LLM call failed: {e}")
-            break
-        time.sleep(LLM_CALL_DELAY_SECONDS)
+            logger.error(f"[Extract] LLM call failed (attempt {attempt + 1}): {e}")
+            break  # non-transient error (auth, etc.) — stop immediately
+
+        if attempt == 0:
+            time.sleep(LLM_CALL_DELAY_SECONDS)
 
     return None
 
 
 def run() -> int:
-    if not GEMINI_API_KEY:
-        logger.warning("[Extract] Skipping — AI_INTEGRATIONS_GEMINI_API_KEY not configured")
+    if not COMMANDCODE_API_KEY:
+        logger.warning(
+            "[Extract] Skipping — COMMANDCODE_API_KEY not set. "
+            "Add it to your .env file."
+        )
         return 0
 
     pending = fetchall("SELECT * FROM clean_items WHERE status = 'pending' LIMIT 50")
-    client = get_client()
+    client  = get_llm_client()
     extracted = 0
 
     for clean in pending:
+        # ── Pre-flight validation ─────────────────────────────────────────
+        try:
+            validate_extract_input(clean.get("clean_text", ""))
+        except InputValidationError as e:
+            logger.warning(f"[Extract] Skipping item {clean['id']}: {e}")
+            execute(
+                "UPDATE clean_items SET status = 'skipped' WHERE id = ?",
+                (clean["id"],),
+            )
+            continue
+
         result = extract_item(client, clean)
         if result is None:
-            execute("UPDATE clean_items SET status = 'failed' WHERE id = ?", (clean["id"],))
+            execute(
+                "UPDATE clean_items SET status = 'failed' WHERE id = ?",
+                (clean["id"],),
+            )
             continue
 
         extracted_id = str(uuid.uuid4())
         with get_conn() as conn:
             conn.execute(
                 """INSERT INTO extracted_items
-                   (id, clean_id, headline, entities_json, event_type, numbers_mentioned,
-                    geography_primary, sectors, time_horizon, source_credibility, confidence, extracted_at, status)
+                   (id, clean_id, headline, entities_json, event_type,
+                    numbers_mentioned, geography_primary, sectors, time_horizon,
+                    source_credibility, confidence, extracted_at, status)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     extracted_id,
@@ -131,7 +159,10 @@ def run() -> int:
                     "pending",
                 ),
             )
-            conn.execute("UPDATE clean_items SET status = 'extracted' WHERE id = ?", (clean["id"],))
+            conn.execute(
+                "UPDATE clean_items SET status = 'extracted' WHERE id = ?",
+                (clean["id"],),
+            )
 
         extracted += 1
         time.sleep(LLM_CALL_DELAY_SECONDS)

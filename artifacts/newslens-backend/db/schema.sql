@@ -77,9 +77,20 @@ CREATE TABLE IF NOT EXISTS cards (
     domain_tags TEXT,
     geo_tags TEXT,
     confidence_badge TEXT,
+    -- immediate | short | long. Produced by both the extract and analyze stations
+    -- but never propagated to the card until 2026-07-26, which is why the UI showed
+    -- a hardcoded "Near-term" on every card regardless of content.
+    time_horizon TEXT,
+    -- JSON snapshot of the enrichment payload (yfinance / FRED) that the analyze
+    -- station saw. Stored on the card so the numbers behind an analysis can be shown
+    -- and audited, rather than only existing inside the prompt.
+    market_data TEXT,
     source_name TEXT,
     source_url TEXT,
     is_live BOOLEAN DEFAULT FALSE,
+    -- TRUE for demo/seed rows. Seed cards are invented, not real news; without this
+    -- flag they were indistinguishable from pipeline output in the API and the UI.
+    is_seed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -123,6 +134,31 @@ CREATE TABLE IF NOT EXISTS enrichment_cache (
     cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP
 );
+
+-- Per-user personalization of a global card.
+--
+-- Cards are generated ONCE, globally, by the analyze station. Personalization is a
+-- separate, much cheaper pass keyed by (card, user) and produced lazily the first
+-- time a user actually requests that card, then cached here forever.
+--
+-- This is deliberately not done inside the analyze station. Baking one user's profile
+-- into the shared card would make the card wrong for everyone else and would cost one
+-- expensive analyze call per user per article. Here the cost is:
+--     O(cards)                        for the global analysis, plus
+--     O(cards x ACTIVE users), lazily for personalization
+-- so a user who never opens the app costs nothing.
+CREATE TABLE IF NOT EXISTS card_personalizations (
+    card_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    personal_impact TEXT,
+    -- Hash of the profile that produced this text. When the user edits their profile
+    -- the hash changes and the row is regenerated instead of serving stale impact.
+    profile_hash TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (card_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_card_personalizations_user ON card_personalizations(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_raw_items_url ON raw_items(url);
 CREATE INDEX IF NOT EXISTS idx_raw_items_status ON raw_items(status);
